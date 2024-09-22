@@ -1,0 +1,65 @@
+import requests
+
+def getWinnerTotalGoals(competition, year):
+    total_goals = 0
+    url = f'https://jsonmock.hackerrank.com/api/football_competitions?name={competition}&year={year}'
+    
+    # First, get the winner of the competition in the given year
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return 0
+    
+    data = response.json()
+
+    # If no data is found, return 0
+    if not data['data']:
+        return 0
+
+    # Extract the winning team
+    winner = data['data'][0]['winner']
+
+    # Function to fetch goals scored by the winner in the specific competition
+    def fetch_goals(team_key):
+        nonlocal total_goals
+        page = 1
+        while True:
+            matches_url = f'https://jsonmock.hackerrank.com/api/football_matches?competition={competition}&year={year}&{team_key}={winner}&page={page}'
+            response = requests.get(matches_url)
+            
+            if response.status_code != 200:
+                return
+            
+            matches_data = response.json()
+
+            # If no match data is found, break out of the loop
+            if not matches_data['data']:
+                break
+
+            # Add goals scored by the winner based on the team key
+            if team_key == 'team1':
+                for match in matches_data['data']:
+                    total_goals += int(match['team1goals'])
+            else:
+                for match in matches_data['data']:
+                    total_goals += int(match['team2goals'])
+
+            # If there are no more pages, break the loop
+            if page >= matches_data['total_pages']:
+                break
+            page += 1
+
+    # Fetch goals where the winner is team1 and team2 in this specific competition
+    fetch_goals('team1')
+    fetch_goals('team2')
+
+    # Return the total goals scored by the winner
+    return total_goals
+
+# This part ensures the function is called and output is printed
+if _name_ == "_main_":
+    competition = input().strip()
+    year = int(input().strip())
+    
+    result = getWinnerTotalGoals(competition, year)
+    print(result)
